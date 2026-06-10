@@ -1,0 +1,34 @@
+module(
+    name = "rules_lang",
+    version = "0.1.0",
+)
+
+# Public rules layer only — the engine + AST source stay private in GitLab
+# aion/polyglot. The Lean atlas arrives as a prebuilt, per-arch olean fetched
+# from this repo's GitHub release assets (see //lean:atlas.bzl). Consumers
+# resolve rules_lang anonymously, with no private-source access.
+bazel_dep(name = "rules_lean", version = "0.5.0")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+
+# Reference docs (stardoc) + the docs/update sh_binary — dev-only.
+bazel_dep(name = "stardoc", version = "0.7.2", dev_dependency = True)
+bazel_dep(name = "rules_shell", version = "0.4.1", dev_dependency = True)
+
+# Hermetic Lean toolchain pinned to the version the atlas olean was built with
+# (leanprover/lean4:v4.30.0-rc2) — Lean rejects a mismatched olean at load.
+lake = use_extension("@rules_lean//lean:lake.bzl", "lake")
+lake.workspace(
+    name = "rules_lang_lake",
+    allow_source_build = True,
+    lake_manifest = "//lean:lake-manifest.json",
+    lakefile = "//lean:lakefile.lean",
+    lean_toolchain = "//lean:lean-toolchain",
+)
+use_repo(lake, "rules_lang_lake")
+
+register_toolchains("@rules_lang_lake//:lean_toolchain_def")
+
+# Per-arch polyglot atlas oleans, fetched from this repo's GitHub releases.
+atlas = use_extension("//lean:atlas.bzl", "atlas_ext")
+use_repo(atlas, "polyglot_atlas_darwin_arm64", "polyglot_atlas_linux_x86_64")

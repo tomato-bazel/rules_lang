@@ -1,0 +1,42 @@
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("//polyglot:aion.bzl", "aion_emit_toolchain")
+
+package(default_visibility = ["//visibility:public"])
+
+# bzl_library targets so stardoc (//docs) can resolve the rule load graph.
+# stardoc needs a bzl_library for every loaded module. rules_lean's own lean_bzl
+# is visibility-restricted to its //docs, but lean.bzl is exports_files'd — so we
+# wrap it here for the docs extract.
+bzl_library(
+    name = "rules_lean_compat",
+    srcs = ["@rules_lean//lean:lean.bzl"],
+    deps = ["@bazel_skylib//rules:diff_test"],
+)
+
+bzl_library(
+    name = "aion_bzl",
+    srcs = [
+        "aion.bzl",
+        "aion_aspects.bzl",
+        "aion_providers.bzl",
+        "aion_rules.bzl",
+    ],
+    deps = [":rules_lean_compat"],
+)
+
+bzl_library(
+    name = "sql_bzl",
+    srcs = ["sql.bzl"],
+)
+
+# TypeScript projection toolchain — consumes the imported atlas (//lean:atlas),
+# which bundles Polyglot.Typescript.{Ast,OfLir,Render}. `aion_emit(target =
+# "typescript")` resolves here. Other languages' aion_emit_toolchains await the
+# atlas bundling their OfLir.
+aion_emit_toolchain(
+    name = "typescript_aion_emit_toolchain",
+    atlas = "//lean:atlas",
+    import_module = "Polyglot.Typescript",
+    language = "typescript",
+    render_fn = "Polyglot.Typescript.OfLir.render",
+)

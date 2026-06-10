@@ -1,0 +1,178 @@
+"""Polyglot.Aion — rule definitions.
+
+Three rules form the core machinery:
+
+  * `aion_spec` — wraps a list of Lean files producing a
+    `Polyglot.Core.Lir.Module` into an `AionSpecInfo`-bearing
+    target. Any consumer that wants to project the spec to
+    source consumes via the provider.
+
+  * `aion_emit_toolchain` — defines a per-target-language
+    projection: which `Polyglot.<Lang>.OfLir` to import, which
+    render function to call, and which polyglot_ast files come
+    along for the ride. Repos can register their own toolchains
+    without forking rules_lang.
+
+  * `aion_emit_main_gen` — the rule that the `aion_emit` macro
+    instantiates. Reads `AionSpecInfo` from `spec` and
+    `AionEmitToolchainInfo` from `toolchain`, materializes a
+    `Main.lean` file (`def main := IO.print (<render_fn>
+    <spec_module>.<spec_symbol>)`), and re-publishes the full
+    transitive set of Lean files needed for compilation as its
+    DefaultInfo. The `aion_emit` macro then hands that off to
+    `lean_emit`. Not exported from the public `aion.bzl` —
+    direct use is unsupported (the rule's surface is an
+    implementation detail of the macro and may change).
+
+The macro lives in `aion.bzl`; this file is the rule-level
+machinery.
+"""
+
+load("@rules_lean//lean:lean.bzl", "LeanInfo")
+load(":aion_aspects.bzl", "aion_spec_aspect")
+load(":aion_providers.bzl", "AionEmitToolchainInfo", "AionSpecInfo")
+
+# ─── aion_spec ──────────────────────────────────────────────────────
+
+def _aion_spec_impl(ctx):
+    srcs_depset = depset(ctx.files.srcs)
+    return [
+        DefaultInfo(files = srcs_depset),
+        AionSpecInfo(
+            srcs = srcs_depset,
+            module = ctx.attr.module,
+            symbol = ctx.attr.symbol,
+        ),
+    ]
+
+aion_spec = rule(
+    implementation = _aion_spec_impl,
+    attrs = {
+        "srcs": attr.label_list(
+            allow_files = [".lean"],
+            mandatory = True,
+            doc = "Lean files. Must include the module defining the spec_symbol Lir.Module value and any catalog modules it imports.",
+        ),
+        "module": attr.string(
+            mandatory = True,
+            doc = "Fully-qualified Lean module path housing the Lir.Module value (e.g. `Aion.V0.Logger.LoggerSpec`).",
+        ),
+        "symbol": attr.string(
+            mandatory = True,
+            doc = "Name of the Lir.Module value within that module (e.g. `loggerModule`).",
+        ),
+    },
+    provides = [AionSpecInfo],
+    doc = """\
+Wraps a set of Lean files producing a `Polyglot.Core.Lir.Module` into
+an `AionSpecInfo`-bearing target. Consumers like `aion_emit`,
+doc-gen, fixture-validation, etc. read the provider.
+""",
+)
+
+# ─── aion_emit_toolchain ────────────────────────────────────────────
+
+def _aion_emit_toolchain_impl(ctx):
+    return [
+        DefaultInfo(),
+        AionEmitToolchainInfo(
+            import_module = ctx.attr.import_module,
+            render_fn = ctx.attr.render_fn,
+            language = ctx.attr.language,
+        ),
+        # Forward the imported atlas oleans as LeanInfo so aion_emit's lean_emit
+        # can `deps` on this toolchain and reach the lowering
+        # (Polyglot.<Lang>.OfLir / Render / Core.Lir) as COMPILED oleans — no
+        # engine source recompiled. This is the public-split seam.
+        ctx.attr.atlas[LeanInfo],
+    ]
+
+aion_emit_toolchain = rule(
+    implementation = _aion_emit_toolchain_impl,
+    attrs = {
+        "language": attr.string(
+            mandatory = True,
+            doc = "Human-readable language identifier (e.g. `typescript`, `sql`).",
+        ),
+        "import_module": attr.string(
+            mandatory = True,
+            doc = "Lean module the generated Main imports to reach the lowering (e.g. `Polyglot.Typescript`).",
+        ),
+        "render_fn": attr.string(
+            mandatory = True,
+            doc = "Fully-qualified Lean function name `Lir.Module → String` (e.g. `Polyglot.Typescript.OfLir.render`).",
+        ),
+        "atlas": attr.label(
+            providers = [LeanInfo],
+            mandatory = True,
+            doc = "The imported polyglot atlas (a lean_imported_library over the prebuilt olean): provides Core.Lir + the language's Render/OfLir as compiled oleans, no source recompile. Forwarded as LeanInfo so aion_emit's lean_emit deps on it.",
+        ),
+    },
+    provides = [AionEmitToolchainInfo],
+    doc = """\
+Defines a per-target-language projection for `aion_emit`. Each
+language registers one of these; `aion_emit(target = ":<tc>", ...)`
+consumes it via the provider. Adding a new target language is a
+new `aion_emit_toolchain` declaration — no rules_lang edits needed.
+""",
+)
+
+# ─── aion_emit_main_gen ─────────────────────────────────────────────
+
+def _aion_emit_main_gen_impl(ctx):
+    spec = ctx.attr.spec[AionSpecInfo]
+    tc = ctx.attr.toolchain[AionEmitToolchainInfo]
+    main_file = ctx.actions.declare_file(ctx.attr.name + ".lean")
+    content = """\
+-- Auto-generated by aion_emit({name}) — do not edit.
+-- Projects {spec_module}.{spec_symbol} : Polyglot.Core.Lir.Module
+-- through {render_fn} to materialize {language} source.
+import {spec_module}
+import {import_module}
+
+def main : IO Unit :=
+  IO.print ({render_fn} {spec_module}.{spec_symbol})
+""".format(
+        name = ctx.label.name,
+        spec_module = spec.module,
+        spec_symbol = spec.symbol,
+        import_module = tc.import_module,
+        render_fn = tc.render_fn,
+        language = tc.language,
+    )
+    ctx.actions.write(main_file, content)
+
+    # Re-publish the spec srcs + the generated Main. The atlas (the lowering
+    # oleans) is NOT a source here — it flows to lean_emit as a LeanInfo dep
+    # (via the toolchain) so it loads from compiled oleans, not recompiled.
+    all_files = depset(
+        direct = [main_file],
+        transitive = [spec.srcs],
+    )
+    return [DefaultInfo(files = all_files)]
+
+aion_emit_main_gen = rule(
+    implementation = _aion_emit_main_gen_impl,
+    attrs = {
+        "spec": attr.label(
+            providers = [AionSpecInfo],
+            mandatory = True,
+            aspects = [aion_spec_aspect],
+            doc = "An aion_spec target. The aspect annotation lets downstream consumers walk to this spec; the rule itself reads via the provider.",
+        ),
+        "toolchain": attr.label(
+            providers = [AionEmitToolchainInfo],
+            mandatory = True,
+            doc = "An aion_emit_toolchain target selecting the projection language.",
+        ),
+    },
+    doc = """\
+Internal rule the `aion_emit` macro uses to generate the lean Main
+file (the one-liner `def main := IO.print (render_fn module.symbol)`)
+and package it with the spec srcs + toolchain srcs as a single
+DefaultInfo file set. The macro's `lean_emit` call then compiles
+the package.
+
+Not for direct use — use the `aion_emit` macro from `aion.bzl`.
+""",
+)

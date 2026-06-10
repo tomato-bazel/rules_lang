@@ -1,0 +1,26 @@
+# Polyglot.Sql — toolchain types for the SQL parse pipeline.
+#
+# Each dialect (postgres, sqlite, …) registers its own implementation
+# of one of these toolchain_types. The `sql_ast_library` rule
+# (//polyglot:sql.bzl) declares a soft dep on every registered
+# dialect's type and dispatches based on the upstream `SqlInfo.dialect`.
+#
+# Rationale for per-dialect types (vs. one generic type with a `dialect`
+# attribute): rule resolution fails fast when a SQL library declares a
+# dialect for which no parser toolchain has been registered, instead of
+# discovering the mismatch at parse-time. Same pattern as
+# `cc_toolchain_type` / per-language Bazel toolchains.
+
+package(default_visibility = ["//visibility:public"])
+
+# Postgres dialect — implemented by `pg_sql_toolchain` from
+# `@rules_postgres//postgres:sql_toolchain.bzl` (libpg_query-backed).
+toolchain_type(
+    name = "postgres_toolchain_type",
+)
+
+# SQLite dialect — implemented by `sqlite_sql_toolchain` from
+# `@rules_sqlite//...` (future; not registered yet).
+toolchain_type(
+    name = "sqlite_toolchain_type",
+)

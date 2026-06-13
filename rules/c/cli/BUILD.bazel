@@ -1,0 +1,54 @@
+load("@rules_python//python:py_binary.bzl", "py_binary")
+
+# Expose CLI sources for srcs= references in macros (e.g.,
+# llvm_ir_equiv_test's py_test wraps llvm_ir_equiv.py).
+exports_files(
+    [
+        "llvm_ir_equiv.py",
+        "c_cluster_diff.py",
+        "c_to_rust_bindings.py",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "json_to_ttl",
+    srcs = ["json_to_ttl.py"],
+    main = "json_to_ttl.py",
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "dump_from_compdb",
+    srcs = ["dump_from_compdb.py"],
+    main = "dump_from_compdb.py",
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "ast_to_tensor",
+    srcs = ["ast_to_tensor.py"],
+    main = "ast_to_tensor.py",
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "llvm_ir_equiv",
+    srcs = ["llvm_ir_equiv.py"],
+    main = "llvm_ir_equiv.py",
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "c_cluster_diff",
+    srcs = ["c_cluster_diff.py"],
+    main = "c_cluster_diff.py",
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "c_to_rust_bindings",
+    srcs = ["c_to_rust_bindings.py"],
+    main = "c_to_rust_bindings.py",
+    visibility = ["//visibility:public"],
+)

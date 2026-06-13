@@ -1,6 +1,6 @@
 module(
     name = "rules_lang",
-    version = "0.1.0",
+    version = "0.2.0",
 )
 
 # Public rules layer only — the engine + AST source stay private in GitLab
@@ -11,9 +11,18 @@ bazel_dep(name = "rules_lean", version = "0.5.0")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 
-# Reference docs (stardoc) + the docs/update sh_binary — dev-only.
+# //rules/c — the C/clang AST-dump + LLVM-IR + struct-diff rule definitions
+# (consumed by rules_postgres' Gate 3). These need the cc toolchain, a shell
+# test rule, and the python CLI helpers. The heavy Rust diff/IR tools
+# (//crates/pipeline) stay private in aion/polyglot — only the rule defs live
+# here, so a consumer that does not instantiate the Gate-3 rules resolves the
+# loads with no private-engine access.
+bazel_dep(name = "rules_cc", version = "0.0.17")
+bazel_dep(name = "rules_shell", version = "0.4.1")
+bazel_dep(name = "rules_python", version = "1.7.0")
+
+# Reference docs (stardoc) — dev-only.
 bazel_dep(name = "stardoc", version = "0.7.2", dev_dependency = True)
-bazel_dep(name = "rules_shell", version = "0.4.1", dev_dependency = True)
 
 # Hermetic Lean toolchain pinned to the version the atlas olean was built with
 # (leanprover/lean4:v4.30.0-rc2) — Lean rejects a mismatched olean at load.

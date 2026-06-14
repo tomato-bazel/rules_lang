@@ -18,19 +18,22 @@ filegroup(
 )
 """
 
-_BASE = "https://github.com/fastverk/rules_lang/releases/download/atlas-v0.1.0"
+# atlas-v0.3.1 adds the generic Syntax precedence kernel (Syntax.Expr +
+# Syntax.Prec) to the bundle, alongside Core/Lir, Sql, Typescript, Java, Wasm,
+# Yaml. Both per-arch tarballs contain Syntax/{Expr,Prec}.olean.
+_BASE = "https://github.com/fastverk/rules_lang/releases/download/atlas-v0.3.1"
 
 def _atlas_ext_impl(_ctx):
     http_archive(
         name = "polyglot_atlas_linux_x86_64",
         url = _BASE + "/polyglot_atlas-linux_x86_64.tar.gz",
-        sha256 = "007aee5277d38b84de77caadf46353aff90fd47a08df00c41a1b28c9434c6e72",
+        sha256 = "3db0d0108edcfd52d74a007c635d605e46b20bcacbcebe5eb1847ea50ba4d3a6",
         build_file_content = _ATLAS_BUILD,
     )
     http_archive(
         name = "polyglot_atlas_darwin_arm64",
         url = _BASE + "/polyglot_atlas-darwin_arm64.tar.gz",
-        sha256 = "fc2dc919ba44e788d3bf37a99ab16a0cad431e3765c943f2357883d5e5384fb6",
+        sha256 = "bb53a9abe0cdb13fdb67c32d2fefdfd6a5043bda25c179b4c6df129710e1356e",
         build_file_content = _ATLAS_BUILD,
     )
 

@@ -1,0 +1,74 @@
+// The cross-repo emit boundary: a per-package translation manifest carrying
+// Lean-rendered source for one or more atlas languages.
+//
+// Producers (aion/lean and other spec repos) render each compilation unit
+// Lean-side via the prebuilt atlas (Polyglot.<Lang>.OfLir.render / Pg.Pretty)
+// and pack the rendered source + provenance here; consumers (aion/lift,
+// aion/sql, …) decode this and assemble it into their own package layout,
+// gated by a convergence test. Rendering happens once, Lean-side, so no
+// consumer needs the Lean toolchain and there is no second renderer to drift.
+//
+// This is a thin envelope over the existing IR: it imports lir.proto (the
+// language-neutral Lir IR) and lir_codec.proto (the Language enum +
+// DeparseOptions). It does NOT define a new IR or a new language set.
+syntax = "proto3";
+
+package polyglot.emit.v1;
+
+import "lir.proto";
+import "lir_codec.proto";
+
+option java_package = "dev.polyglot.emit.v1";
+option java_outer_classname = "EmitProto";
+option java_multiple_files = true;
+
+// Identity of the source package this manifest renders. `manifest_version` is
+// provenance only — the consumer's own publish tooling stays the version
+// authority and the assembler never writes `version` into package.json.
+message PackageIdentity {
+  string name = 1;               // consumer package name, e.g. "@aion/logger"
+  string manifest_version = 2;   // provenance only (not the published version)
+  string source_revision = 3;    // git revision of the producing repo
+  string lir_schema_version = 4; // lir.proto schema version the units were lowered against
+}
+
+// One rendered artifact: the deparse of a unit into a single atlas language.
+message RenderedSource {
+  // Which atlas render this is. Reuses the codec's language set rather than
+  // hard-coding any one language — TYPESCRIPT | SQL | PYTHON | RUST | JAVA | C.
+  polyglot.lir.codec.v1.Language language = 1;
+  // Consumer-relative output path (differs by language; e.g. "index.ts").
+  string out_path = 2;
+  // The render_fn output (Polyglot.Typescript.OfLir.render / Pg.Pretty / …).
+  string source = 3;
+  // How it was rendered (e.g. whether the native formatter was run).
+  polyglot.lir.codec.v1.DeparseOptions options = 4;
+}
+
+// Where a unit came from and what backs it — for the proof/provenance story.
+message Provenance {
+  string source_module = 1;          // e.g. "Aion.Logger.LoggerSpec"
+  string source_symbol = 2;          // e.g. "loggerModule"
+  string source_sha256 = 3;          // hash of the source spec
+  repeated string theorem_refs = 4;  // proven semantic backing, when any
+  repeated string structural_gates = 5;
+}
+
+// One source unit (a Lean spec symbol) and its renders across languages.
+message CompilationUnit {
+  // The language-neutral Lir IR, when the unit was lowered through Lir
+  // (TS/Java/Wasm/Python). Absent for renders produced from a
+  // language-specific AST (e.g. SQL via the Pg AST), where there is no Lir.
+  polyglot.lir.v1.Module module = 1;
+  // One or more atlas-language renders of this unit.
+  repeated RenderedSource renders = 2;
+  Provenance provenance = 3;
+}
+
+// Per-package translation manifest — the cross-repo emit boundary artifact.
+message TranslationManifest {
+  PackageIdentity identity = 1;
+  repeated CompilationUnit units = 2;
+  // Topological consumer dependencies (consumer package names) for ramp order.
+  repeated string aion_deps = 3;
+}

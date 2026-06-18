@@ -1,0 +1,14 @@
+load("@rules_python//python:defs.bzl", "py_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# Packs Lean-rendered sources + identity into a polyglot.emit.v1
+# TranslationManifest binpb — the cross-repo emit boundary artifact. Driven by
+# the polyglot_emit_manifest rule (//tools/emit:emit_manifest.bzl).
+py_binary(
+    name = "manifest_packer",
+    srcs = ["manifest_packer.py"],
+    deps = ["//proto:emit_py_proto"],
+)
+
+exports_files(["emit_manifest.bzl"])

@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package polyglot.lir.codec.v1;
+
+import "lir.proto";
+
+option java_package = "dev.polyglot.lir.codec.v1";
+option java_outer_classname = "LirCodecProto";
+option java_multiple_files = true;
+
+// Languages a Lir codec can parse/deparse. Mirrored here (not imported
+// from klad.parser.v1) because the codec service has an independent
+// lifecycle and needs C/SQL, which the klad parser enum lacks.
+enum Language {
+  LANGUAGE_UNSPECIFIED = 0;
+  LANGUAGE_TYPESCRIPT = 1;
+  LANGUAGE_PYTHON = 2;
+  LANGUAGE_RUST = 3;
+  LANGUAGE_JAVA = 4;
+  LANGUAGE_C = 5;
+  LANGUAGE_SQL = 6;
+}
+
+message ParseOptions {
+  // Allow the parser to drop source it can't yet model into a Lir `raw`
+  // fragment instead of failing (the ratchet escape hatch).
+  bool allow_raw_fallback = 1;
+  // For diagnostics only.
+  string source_path = 2;
+}
+
+message DeparseOptions {
+  // Run the native pretty-printer / formatter on the emitted source.
+  bool format = 1;
+}
+
+message Diagnostic {
+  enum Severity {
+    SEVERITY_UNSPECIFIED = 0;
+    ERROR = 1;
+    WARNING = 2;
+    INFO = 3;
+  }
+  Severity severity = 1;
+  string message = 2;
+  uint32 line = 3;  // 0 if N/A
+  uint32 col = 4;   // 0 if N/A
+}
+
+// source bytes + language + options -> Lir
+message ParseRequest {
+  Language language = 1;
+  bytes source = 2;  // UTF-8 surface text
+  ParseOptions options = 3;
+}
+
+message ParseResponse {
+  polyglot.lir.v1.Module module = 1;
+  repeated Diagnostic diagnostics = 2;
+  bool ok = 3;  // false => module is partial / invalid
+}
+
+// Lir + options -> source bytes
+message DeparseRequest {
+  Language language = 1;
+  polyglot.lir.v1.Module module = 2;
+  DeparseOptions options = 3;
+}
+
+message DeparseResponse {
+  bytes source = 1;
+  repeated Diagnostic diagnostics = 2;  // e.g. a LowerError.wrongTarget
+  bool ok = 3;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  bool serving = 1;
+  string version = 2;
+}
+
+message CapabilitiesRequest {}
+
+message CapabilitiesResponse {
+  Language language = 1;
+  bool can_parse = 2;
+  bool can_deparse = 3;
+  // Lir constructor names this server round-trips losslessly (drives the
+  // verification matrix); e.g. "typeAlias", "valDecl", "arrow".
+  repeated string lossless_constructors = 4;
+}
+
+// One handler, two transports: the CLI/pipe projection (hermetic, the
+// shape roundtrip.bzl drives) and this gRPC service (dev daemon).
+service LirCodec {
+  rpc Parse(ParseRequest) returns (ParseResponse);
+  rpc Deparse(DeparseRequest) returns (DeparseResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Capabilities(CapabilitiesRequest) returns (CapabilitiesResponse);
+}

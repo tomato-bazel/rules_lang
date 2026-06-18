@@ -1,0 +1,49 @@
+load("@protobuf//bazel:py_proto_library.bzl", "py_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "lir.proto",
+    "lir_codec.proto",
+    "emit.proto",
+])
+
+# ─── Lir interchange (the language-neutral IR) ───────────────────────
+# lir.proto mirrors Polyglot.Core.Lir.Module; lir_codec.proto adds the
+# `Language` enum (TYPESCRIPT/SQL/…) + DeparseOptions. Ported from the
+# polyglot source monorepo (proto/) so the cross-repo emit boundary is
+# served from the published @rules_lang slice, not a source override.
+
+proto_library(
+    name = "lir_proto",
+    srcs = ["lir.proto"],
+    strip_import_prefix = "",
+)
+
+proto_library(
+    name = "lir_codec_proto",
+    srcs = ["lir_codec.proto"],
+    strip_import_prefix = "",
+    deps = [":lir_proto"],
+)
+
+# The cross-repo emit boundary: a per-package translation manifest carrying
+# Lean-rendered source for the atlas languages. Thin envelope over the IR —
+# imports lir.proto (the Module) + lir_codec.proto (Language + DeparseOptions).
+proto_library(
+    name = "emit_proto",
+    srcs = ["emit.proto"],
+    strip_import_prefix = "",
+    deps = [
+        ":lir_codec_proto",
+        ":lir_proto",
+    ],
+)
+
+# Python bindings for the manifest packer (//tools/emit:manifest_packer).
+# Transitively generates lir_pb2 + lir_codec_pb2 (the imports) too.
+py_proto_library(
+    name = "emit_py_proto",
+    deps = [":emit_proto"],
+)

@@ -21,6 +21,13 @@ bazel_dep(name = "rules_cc", version = "0.0.17")
 bazel_dep(name = "rules_shell", version = "0.4.1")
 bazel_dep(name = "rules_python", version = "1.7.0")
 
+# //proto + //tools/emit — the cross-repo emit boundary (polyglot.emit.v1
+# TranslationManifest). The proto chain (lir/lir_codec/emit) + the Python
+# manifest packer let producers publish Lean-rendered source that consumers
+# (aion/lift's aion_ts_package, aion/sql) decode with no Lean toolchain.
+bazel_dep(name = "rules_proto", version = "7.1.0")
+bazel_dep(name = "protobuf", version = "33.4")
+
 # Reference docs (stardoc) — dev-only.
 bazel_dep(name = "stardoc", version = "0.7.2", dev_dependency = True)
 

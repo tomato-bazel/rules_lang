@@ -1,0 +1,280 @@
+// AUTO-GENERATED from Polyglot.Core.Lir.
+// Source of truth: Polyglot.Codegen.LirProtoSchema (descriptor: proto/lir.descriptor.txtpb).
+// DO NOT EDIT — regenerate + verify via the //proto:lir_proto gate.
+//
+// Field-level docs live in Lir.lean; DebugString carries no comments.
+
+syntax = "proto3";
+
+package polyglot.lir.v1;
+
+option java_package = "dev.polyglot.lir.v1";
+option java_outer_classname = "LirProto";
+option java_multiple_files = true;
+
+enum PrimType {
+  PRIM_TYPE_UNSPECIFIED = 0;
+  PRIM_TYPE_STRING = 1;
+  PRIM_TYPE_INT = 2;
+  PRIM_TYPE_BOOL = 3;
+  PRIM_TYPE_VOID = 4;
+  PRIM_TYPE_UNKNOWN = 5;
+}
+
+enum VarKind {
+  VAR_KIND_UNSPECIFIED = 0;
+  VAR_KIND_CONST_LET = 1;
+  VAR_KIND_MUT_LET = 2;
+}
+
+enum TargetTag {
+  TARGET_TAG_UNSPECIFIED = 0;
+  TARGET_TAG_TYPESCRIPT = 1;
+  TARGET_TAG_SQL = 2;
+  TARGET_TAG_PYTHON = 3;
+  TARGET_TAG_RUST = 4;
+  TARGET_TAG_C = 5;
+  TARGET_TAG_OTHER = 6;
+}
+
+message Target {
+  .polyglot.lir.v1.TargetTag tag = 1;
+  string other_name = 2;
+}
+
+message LineList {
+  repeated string lines = 1;
+}
+
+message Comment {
+  oneof comment {
+    string line = 1;
+    .polyglot.lir.v1.LineList block = 2;
+    .polyglot.lir.v1.LineList doc_block = 3;
+  }
+}
+
+message RawFrag {
+  .polyglot.lir.v1.Target target = 1;
+  string text = 2;
+}
+
+message NamedType {
+  string name = 1;
+  repeated .polyglot.lir.v1.TypeExpr args = 2;
+}
+
+message RecordField {
+  string name = 1;
+  bool optional = 2;
+  .polyglot.lir.v1.TypeExpr type = 3;
+}
+
+message RecordType {
+  repeated .polyglot.lir.v1.RecordField fields = 1;
+}
+
+message TypeExpr {
+  oneof type_expr {
+    .polyglot.lir.v1.PrimType prim = 1;
+    .polyglot.lir.v1.NamedType named = 2;
+    .polyglot.lir.v1.RecordType record = 3;
+    .polyglot.lir.v1.RawFrag raw = 4;
+  }
+}
+
+message Unit {
+}
+
+message ObjField {
+  string name = 1;
+  .polyglot.lir.v1.Expr value = 2;
+}
+
+message ObjLit {
+  repeated .polyglot.lir.v1.ObjField fields = 1;
+}
+
+message CallExpr {
+  .polyglot.lir.v1.Expr callee = 1;
+  repeated .polyglot.lir.v1.Expr args = 2;
+}
+
+message DotExpr {
+  .polyglot.lir.v1.Expr target = 1;
+  string member = 2;
+}
+
+message TernExpr {
+  .polyglot.lir.v1.Expr cond = 1;
+  .polyglot.lir.v1.Expr then_expr = 2;
+  .polyglot.lir.v1.Expr else_expr = 3;
+}
+
+message ArrowParam {
+  string name = 1;
+  .polyglot.lir.v1.TypeExpr type = 2;
+  bool optional = 3;
+}
+
+message ArrowExpr {
+  repeated .polyglot.lir.v1.ArrowParam params = 1;
+  .polyglot.lir.v1.TypeExpr return_ty = 2;
+  .polyglot.lir.v1.ArrowBody body = 3;
+}
+
+message Expr {
+  oneof expr {
+    string str = 1;
+    sint64 int = 2;
+    bool bool = 3;
+    .polyglot.lir.v1.Unit null_lit = 4;
+    string ident = 5;
+    .polyglot.lir.v1.ObjLit obj = 6;
+    .polyglot.lir.v1.CallExpr call = 7;
+    .polyglot.lir.v1.DotExpr dot = 8;
+    .polyglot.lir.v1.TernExpr tern = 9;
+    .polyglot.lir.v1.ArrowExpr arrow = 10;
+    .polyglot.lir.v1.RawFrag raw = 11;
+  }
+}
+
+message StmtList {
+  repeated .polyglot.lir.v1.Stmt stmts = 1;
+}
+
+message ArrowBody {
+  oneof arrow_body {
+    .polyglot.lir.v1.StmtList block = 1;
+    .polyglot.lir.v1.Expr expr = 2;
+  }
+}
+
+message LetDecl {
+  .polyglot.lir.v1.VarKind kind = 1;
+  string name = 2;
+  .polyglot.lir.v1.TypeExpr type = 3;
+  .polyglot.lir.v1.Expr rhs = 4;
+}
+
+message Stmt {
+  oneof stmt {
+    .polyglot.lir.v1.LetDecl let_decl = 1;
+    .polyglot.lir.v1.Expr ret_stmt = 2;
+    .polyglot.lir.v1.Expr expr_stmt = 3;
+    .polyglot.lir.v1.RawFrag raw = 4;
+  }
+}
+
+message DefaultImport {
+  string binding = 1;
+  string source = 2;
+}
+
+message NamedImport {
+  repeated string members = 1;
+  string source = 2;
+}
+
+message TypeImport {
+  repeated string members = 1;
+  string source = 2;
+}
+
+message ImportDecl {
+  oneof import_decl {
+    .polyglot.lir.v1.DefaultImport default_import = 1;
+    .polyglot.lir.v1.NamedImport named_import = 2;
+    .polyglot.lir.v1.TypeImport type_import = 3;
+  }
+}
+
+message InterfaceParam {
+  string name = 1;
+  .polyglot.lir.v1.TypeExpr type = 2;
+  bool optional = 3;
+}
+
+message InterfaceParamList {
+  repeated .polyglot.lir.v1.InterfaceParam params = 1;
+}
+
+message InterfaceMember {
+  string name = 1;
+  .polyglot.lir.v1.Comment doc = 2;
+  .polyglot.lir.v1.InterfaceParamList params = 3;
+  .polyglot.lir.v1.TypeExpr type = 4;
+}
+
+message TypeAliasDecl {
+  string name = 1;
+  bool exported = 2;
+  .polyglot.lir.v1.TypeExpr rhs = 3;
+}
+
+message ValDecl {
+  string name = 1;
+  bool exported = 2;
+  .polyglot.lir.v1.TypeExpr type = 3;
+  .polyglot.lir.v1.Expr rhs = 4;
+}
+
+message ReExportAll {
+  string source = 1;
+  bool type_only = 2;
+}
+
+message ReExportNamed {
+  string source = 1;
+  bool type_only = 2;
+  repeated string members = 3;
+}
+
+message MixedMember {
+  string name = 1;
+  bool is_type = 2;
+}
+
+message ReExportMixed {
+  string source = 1;
+  repeated .polyglot.lir.v1.MixedMember members = 2;
+}
+
+message EnumMember {
+  string name = 1;
+  string value = 2;
+}
+
+message EnumDecl {
+  string name = 1;
+  bool exported = 2;
+  repeated .polyglot.lir.v1.EnumMember members = 3;
+}
+
+message InterfaceDecl {
+  string name = 1;
+  bool exported = 2;
+  repeated .polyglot.lir.v1.InterfaceMember members = 3;
+}
+
+message TopDecl {
+  oneof top_decl {
+    .polyglot.lir.v1.TypeAliasDecl type_alias = 1;
+    .polyglot.lir.v1.ValDecl val_decl = 2;
+    .polyglot.lir.v1.ReExportAll re_export_all = 3;
+    .polyglot.lir.v1.ReExportNamed re_export_named = 4;
+    .polyglot.lir.v1.ReExportMixed re_export_mixed = 5;
+    .polyglot.lir.v1.EnumDecl enum_decl = 6;
+    .polyglot.lir.v1.InterfaceDecl interface_decl = 7;
+    .polyglot.lir.v1.Expr default_export = 8;
+    .polyglot.lir.v1.Comment comment = 9;
+    .polyglot.lir.v1.RawFrag raw = 10;
+  }
+}
+
+message Module {
+  repeated .polyglot.lir.v1.Comment comments = 1;
+  repeated .polyglot.lir.v1.ImportDecl imports = 2;
+  repeated .polyglot.lir.v1.TopDecl decls = 3;
+}
+

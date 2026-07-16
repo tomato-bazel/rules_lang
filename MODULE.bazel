@@ -1,6 +1,6 @@
 module(
     name = "rules_lang",
-    version = "0.4.2",
+    version = "0.4.3",
 )
 
 # Public rules layer only — the engine + AST source stay private in GitLab

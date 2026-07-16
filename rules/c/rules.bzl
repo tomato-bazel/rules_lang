@@ -631,11 +631,17 @@ def rust_llvm_ir_single(
     # like a toolchain problem but is just an unset variable. The default keeps
     # the rustup path when HOME exists and degrades to the other PATH entries
     # when it doesn't.
+    #
+    # The braces are DOUBLED because this string is .format()ed below: `{HOME:-}`
+    # would otherwise be parsed as a format field ("Missing argument 'HOME:-'")
+    # — `{{`/`}}` are how .format() escapes a literal brace. `$$` is separately
+    # how a genrule escapes a literal `$` for the shell. So `$${{HOME:-}}` here
+    # renders as `${HOME:-}` in the action.
     native.genrule(
         name = name,
         srcs = [src],
         outs = [name + ".ll"],
-        cmd = ("export PATH=\"$${HOME:-}/.cargo/bin:/usr/local/bin:$$PATH\"; " +
+        cmd = ("export PATH=\"$${{HOME:-}}/.cargo/bin:/usr/local/bin:$$PATH\"; " +
                "rustc --edition={edition} --crate-type={crate_type} " +
                "--emit=llvm-ir -C opt-level={opt_level} {extra} " +
                "-o $@ $(location {src})").format(

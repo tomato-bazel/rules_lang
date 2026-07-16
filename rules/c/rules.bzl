@@ -607,16 +607,35 @@ def rust_llvm_ir_single(
     """
     extra = " ".join(extra_args or [])
 
+    # `manual` by default. This is a non-hermetic spike: it shells out to a HOST
+    # rustc, which a clean machine or a CI image need not have. Untagged, it gets
+    # swept into `bazel build //...` and fails the whole wildcard for everyone
+    # (this is exactly what has been breaking rules_postgres' //... build).
+    # `manual` only removes it from WILDCARD expansion — an explicit dep, e.g.
+    # llvm_ir_equiv_test naming it, still builds it. Callers can override by
+    # passing their own tags.
+    tags = kwargs.pop("tags", [])
+    if "manual" not in tags:
+        tags = list(tags) + ["manual"]
+
     # Prepend the typical rustup install dir to PATH so the genrule
     # finds host-installed `rustc` even under Bazel's minimal action
     # env. local=True also skips sandboxing so any other host PATH
     # entries are usable. Non-hermetic spike pattern; the proper fix
     # is rules_rust + a pinned toolchain.
+    #
+    # ${HOME:-} — NOT $HOME. Bazel does not put HOME in an action's env (not even
+    # for local=True, which skips the sandbox but still scrubs the env), and
+    # genrule commands run under `set -u`. A bare $HOME therefore aborts with
+    # "HOME: unbound variable" BEFORE rustc is ever consulted — the failure looks
+    # like a toolchain problem but is just an unset variable. The default keeps
+    # the rustup path when HOME exists and degrades to the other PATH entries
+    # when it doesn't.
     native.genrule(
         name = name,
         srcs = [src],
         outs = [name + ".ll"],
-        cmd = ("export PATH=\"$$HOME/.cargo/bin:/usr/local/bin:$$PATH\"; " +
+        cmd = ("export PATH=\"$${HOME:-}/.cargo/bin:/usr/local/bin:$$PATH\"; " +
                "rustc --edition={edition} --crate-type={crate_type} " +
                "--emit=llvm-ir -C opt-level={opt_level} {extra} " +
                "-o $@ $(location {src})").format(
@@ -628,6 +647,7 @@ def rust_llvm_ir_single(
         ),
         message = "rustc --emit=llvm-ir " + name,
         local = True,
+        tags = tags,
         **kwargs
     )
 

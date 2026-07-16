@@ -1,13 +1,13 @@
 module(
     name = "rules_lang",
-    version = "0.4.0",
+    version = "0.4.1",
 )
 
 # Public rules layer only — the engine + AST source stay private in GitLab
 # aion/polyglot. The Lean atlas arrives as a prebuilt, per-arch olean fetched
 # from this repo's GitHub release assets (see //lean:atlas.bzl). Consumers
 # resolve rules_lang anonymously, with no private-source access.
-bazel_dep(name = "rules_lean", version = "0.5.0")
+bazel_dep(name = "rules_lean", version = "0.5.4")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 

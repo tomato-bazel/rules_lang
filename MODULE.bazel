@@ -1,13 +1,13 @@
 module(
     name = "rules_lang",
-    version = "0.4.3",
+    version = "0.4.4",
 )
 
 # Public rules layer only — the engine + AST source stay private in GitLab
 # aion/polyglot. The Lean atlas arrives as a prebuilt, per-arch olean fetched
 # from this repo's GitHub release assets (see //lean:atlas.bzl). Consumers
 # resolve rules_lang anonymously, with no private-source access.
-bazel_dep(name = "rules_lean", version = "0.5.4")
+bazel_dep(name = "rules_lean", version = "0.5.5")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 
@@ -34,9 +34,13 @@ bazel_dep(name = "stardoc", version = "0.7.2", dev_dependency = True)
 # Hermetic Lean toolchain pinned to the version the atlas olean was built with
 # (leanprover/lean4:v4.30.0-rc2) — Lean rejects a mismatched olean at load.
 lake = use_extension("@rules_lean//lean:lake.bzl", "lake")
+# Dep-free: the lakefile declares no `require`s, so there is nothing to fetch or
+# build — rules_lean emits just the toolchain. NO `allow_source_build`: it only
+# gates rules_lean's `lake build <pkg>` fallback, and with zero packages there is
+# nothing for it to build. It was previously True purely to make the nominal
+# batteries `require` resolve, which cost ~200 source-built modules per cold fetch.
 lake.workspace(
     name = "rules_lang_lake",
-    allow_source_build = True,
     lake_manifest = "//lean:lake-manifest.json",
     lakefile = "//lean:lakefile.lean",
     lean_toolchain = "//lean:lean-toolchain",

@@ -1,6 +1,6 @@
 module(
     name = "rules_lang",
-    version = "0.4.4",
+    version = "0.4.5",
 )
 
 # Public rules layer only — the engine + AST source stay private in GitLab
@@ -34,6 +34,7 @@ bazel_dep(name = "stardoc", version = "0.7.2", dev_dependency = True)
 # Hermetic Lean toolchain pinned to the version the atlas olean was built with
 # (leanprover/lean4:v4.30.0-rc2) — Lean rejects a mismatched olean at load.
 lake = use_extension("@rules_lean//lean:lake.bzl", "lake")
+
 # Dep-free: the lakefile declares no `require`s, so there is nothing to fetch or
 # build — rules_lean emits just the toolchain. NO `allow_source_build`: it only
 # gates rules_lean's `lake build <pkg>` fallback, and with zero packages there is

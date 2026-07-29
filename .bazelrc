@@ -1,0 +1,25 @@
+common --enable_bzlmod
+
+# Bazel module registries, in priority order.
+#
+# THIS FILE EXISTS BECAUSE CI FAILED WITHOUT IT. rules_lang `bazel_dep`s on
+# rules_lean, which is an org module and is NOT in BCR. With no committed
+# registry, a clean checkout resolves against BCR alone and dies at module
+# resolution before it can build anything:
+#
+#   ERROR: Error computing the main repository mapping: in module dependency
+#   chain <root> -> rules_lean@0.5.5: module rules_lean@0.5.5 not found in
+#   registries: https://bcr.bazel.build/... not found
+#
+# Local builds hid this completely: a developer's ~/.bazelrc supplies the org
+# registry, so `bazel test //docs/...` passes on a workstation and fails in CI
+# on the identical commit. Reproduce CI's view with `bazel --nohome_rc ...`.
+#
+# rules_lean (the only org dep) resolves from registry.tbzl.dev; everything else
+# — platforms, bazel_skylib, rules_cc, rules_shell, rules_python, rules_proto,
+# protobuf, stardoc — comes from BCR. Order is load-bearing: `--registry` flags
+# ACCUMULATE rather than replace, and are consulted in the order given.
+common --registry=https://registry.tbzl.dev/
+common --registry=https://bcr.bazel.build/
+
+try-import %workspace%/user.bazelrc

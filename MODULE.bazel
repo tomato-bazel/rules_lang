@@ -1,6 +1,6 @@
 module(
     name = "rules_lang",
-    version = "0.4.5",
+    version = "0.5.0",
 )
 
 # Public rules layer only — the engine + AST source stay private in GitLab
@@ -48,7 +48,21 @@ lake.workspace(
 )
 use_repo(lake, "rules_lang_lake")
 
-register_toolchains("@rules_lang_lake//:lean_toolchain_def")
+# dev_dependency: this toolchain builds rules_lang's OWN Lean targets, it is not
+# part of rules_lang's surface. Registration is EAGER — Bazel loads the registered
+# toolchain's package to read its `toolchain_type`, which runs the `lake_workspace`
+# repository rule — and a non-dev registration propagates to every transitive
+# consumer. So a pure-Rust build in a repo that merely `bazel_dep`s on rules_lang
+# materialized @rules_lang_lake (Lean toolchain fetch + extraction) before it could
+# analyze anything, and no `--config=lean`-style opt-in on the consumer side can
+# suppress a registration made inside a dependency module.
+#
+# Dev registrations STILL APPLY when rules_lang is the ROOT module, so this repo's
+# own //lean/... targets are unaffected. Same reasoning rules_lean and spec document.
+register_toolchains(
+    "@rules_lang_lake//:lean_toolchain_def",
+    dev_dependency = True,
+)
 
 # Per-arch polyglot atlas oleans, fetched from this repo's GitHub releases.
 atlas = use_extension("//lean:atlas.bzl", "atlas_ext")

@@ -4,6 +4,38 @@ All notable changes to rules_lang. The format is loosely
 [Keep a Changelog](https://keepachangelog.com/) — version headers mirror the
 published bazel-registry entries.
 
+## 0.5.0 — the Lean toolchain registration is dev-scoped (consumers stop paying for it)
+
+`register_toolchains("@rules_lang_lake//:lean_toolchain_def")` was at module
+scope, non-dev. Registration is EAGER: Bazel loads a registered toolchain's
+package to read its `toolchain_type`, and loading that package runs the
+`lake_workspace` repository rule. Non-dev, that propagates to every transitive
+consumer — so a repo that takes rules_lang as a `bazel_dep` materialized
+`@rules_lang_lake` (Lean toolchain download + extraction) during ANALYSIS of
+targets with no Lean anywhere in their graph, including pure-Rust ones. There is
+no consumer-side escape: a `--config=lean`-style opt-in cannot suppress a
+registration made inside a dependency module.
+
+It is now `dev_dependency = True`. Nothing else changes:
+
+- **rules_lang's own Lean targets are unaffected.** Dev registrations still apply
+  when the module is ROOT, which is the case for this repo's own builds and CI.
+  `//smoke` (a `lean_library` against `//lean:atlas`) resolves the toolchain
+  exactly as before.
+- **No consumer relied on it.** Every downstream repo with Lean targets already
+  registers its own lake workspace's toolchain — rules_texlive
+  (`@cweb_lean_ws//:lean_toolchain_def`), agentic_ide_runtime and agora
+  (`@lake_deps//:lean_toolchain_def`), aion (`--extra_toolchains=@lake_deps//:
+  lean_toolchain_def` under `--config=lean`). None of them reach for
+  `@rules_lang_lake`.
+
+Minor rather than patch because this removes a toolchain from rules_lang's
+transitive surface. If a consumer *was* silently resolving `@rules_lang_lake`'s
+Lean toolchain for its own `lean_*` targets, it will now fail toolchain
+resolution and must register its own — which is the correct outcome, since
+rules_lang's toolchain is pinned to rules_lang's `lean-toolchain`, not the
+consumer's.
+
 ## 0.4.0 — cross-repo emit boundary
 
 - Adds the `polyglot.emit.v1` emit boundary: `//proto/{lir,lir_codec,emit}.proto`

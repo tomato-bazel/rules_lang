@@ -18,6 +18,17 @@ extensibility per the architecture decision in INTERNAL.md.
 
 load(":aion_providers.bzl", "AionSpecInfo")
 
+# buildifier: disable=name-conventions
+#
+# Bazel convention wants a provider's name to end in `Info` — this one predates
+# the lint being run at all (rules_lang had no CI until now), and its sibling
+# `AionSpecInfo` does comply. Renaming it to `AionSpecCollectionInfo` is the
+# correct fix, but it is a PUBLIC API break for a published module: the symbol is
+# documented in docs/aion.md, so the rename needs a version bump and a stardoc
+# regen, which does not belong in the commit that introduces CI. Suppressed here
+# so the new lint job reflects the repo's real state instead of being weakened;
+# tracked as the one known deviation. No consumer outside this repo reads it
+# (grepped across both orgs), so the rename stays cheap whenever it happens.
 AionSpecCollection = provider(
     doc = "Collected AionSpecInfo records reachable from a target via deps / spec / specs edges.",
     fields = {

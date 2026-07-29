@@ -1,0 +1,95 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# NOTE ON COST — read before adding a job here.
+#
+# Every Bazel job in this repo materializes @rules_lang_lake, which downloads and
+# extracts a ~2.5 GB Lean toolchain, EVEN IF the job builds nothing Lean.
+#
+# That is not a mistake and it is not fixable from inside a job. rules_lang
+# registers its own Lean toolchain, and toolchain registration is EAGER: Bazel
+# loads the registered toolchain's package to read its `toolchain_type`, and
+# loading that package runs the `lake_workspace` repository rule. The
+# registration is `dev_dependency = True` (as of 0.5.0, so that CONSUMERS stop
+# paying for it) — but a dev dependency still applies when the module is ROOT,
+# which is exactly what CI is. So the cost lands here and nowhere else, which is
+# the intended trade.
+#
+# rules_lean's own ci.yml has a comment claiming its fast job "does not exercise
+# lake_workspace". That claim is false for the same reason. Do not copy it here.
+#
+# Measured (darwin/arm64, cold output base, dep-free lake workspace so no mathlib):
+#
+#   bazel test //docs/...     493s   toolchain fetch + stardoc's protobuf/Java build
+#   bazel build //smoke/...    12s   same output base, toolchain already warm
+#
+# So the toolchain is a fixed toll and stardoc dominates the first run.
+# `repository-cache: true` below is what keeps both off the critical path on warm
+# runs. `timeout-minutes` is set ~3x the cold number so a slow fetch reports as a
+# slow job rather than a mystery failure.
+
+jobs:
+  # Fast gate: the stardoc-generated reference docs must match the .bzl
+  # docstrings. `bazel run //docs:update` regenerates aion.md + sql.md; the
+  # diff_tests fail if someone changed a rule without doing so.
+  #
+  # Not actually fast on a cold cache — see the note above.
+  test:
+    name: bazel test //docs/...
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.10.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-${{ matrix.os }}
+          repository-cache: true
+      - run: bazel test //docs/... --test_output=errors
+
+  buildifier:
+    name: buildifier lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: install buildifier
+        run: |
+          curl -fsSL -o /usr/local/bin/buildifier \
+            https://github.com/bazelbuild/buildtools/releases/download/v7.3.1/buildifier-linux-amd64
+          chmod +x /usr/local/bin/buildifier
+      - run: buildifier --mode=check --lint=warn -r .
+
+  # End-to-end: compile a trivial Lean module against //lean:atlas, which fetches
+  # the per-arch olean tarball from this repo's GitHub releases. This is the check
+  # that the RELEASED artifact is a loadable import root — a broken or
+  # wrong-toolchain atlas upload fails here and nowhere else, so it is worth the
+  # toolchain cost.
+  #
+  # `bazel build`, not `bazel test`: //smoke:smoke is a lean_library, and
+  # compiling it IS the assertion.
+  #
+  # ubuntu only. The atlas ships per-arch (linux_x86_64 + darwin_arm64) and both
+  # are gated at release time; running one arch here is enough to catch a bad
+  # upload without doubling the toolchain fetch.
+  smoke:
+    name: lean smoke (atlas olean load)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.10.0
+        with:
+          bazelisk-cache: true
+          disk-cache: smoke-${{ github.workflow }}
+          repository-cache: true
+      - run: bazel build //smoke/... --show_result=1

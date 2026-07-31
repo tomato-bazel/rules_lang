@@ -42,20 +42,26 @@ config_setting(
 # until then this names the gap at the point someone hits it.
 lean_imported_library(
     name = "atlas",
-    srcs = select({
-        ":linux_x86_64": ["@polyglot_atlas_linux_x86_64//:all"],
-        ":darwin_arm64": ["@polyglot_atlas_darwin_arm64//:all"],
-    }, no_match_error = (
-        "No polyglot atlas is published for this platform.\n" +
-        "Published: linux_x86_64, darwin_arm64. Notably ABSENT: linux_arm64,\n" +
-        "which is what every Graviton/arm64 workload builds for — so a Lean\n" +
-        "target in an arm64 configuration fails HERE, at analysis, rather than\n" +
-        "at fetch. Build Lean targets on an x86_64 exec platform, or publish a\n" +
-        "linux_arm64 archive from polyglot's release job and add it to\n" +
-        "//lean:atlas.bzl."
-    )),
-    path_marker = select({
-        ":linux_x86_64": "@polyglot_atlas_linux_x86_64//:.lean_root",
-        ":darwin_arm64": "@polyglot_atlas_darwin_arm64//:.lean_root",
-    }, no_match_error = "See the no_match_error on :atlas srcs — no atlas for this platform."),
+    srcs = select(
+        {
+            ":linux_x86_64": ["@polyglot_atlas_linux_x86_64//:all"],
+            ":darwin_arm64": ["@polyglot_atlas_darwin_arm64//:all"],
+        },
+        no_match_error = (
+            "No polyglot atlas is published for this platform.\n" +
+            "Published: linux_x86_64, darwin_arm64. Notably ABSENT: linux_arm64,\n" +
+            "which is what every Graviton/arm64 workload builds for — so a Lean\n" +
+            "target in an arm64 configuration fails HERE, at analysis, rather than\n" +
+            "at fetch. Build Lean targets on an x86_64 exec platform, or publish a\n" +
+            "linux_arm64 archive from polyglot's release job and add it to\n" +
+            "//lean:atlas.bzl."
+        ),
+    ),
+    path_marker = select(
+        {
+            ":linux_x86_64": "@polyglot_atlas_linux_x86_64//:.lean_root",
+            ":darwin_arm64": "@polyglot_atlas_darwin_arm64//:.lean_root",
+        },
+        no_match_error = "See the no_match_error on :atlas srcs — no atlas for this platform.",
+    ),
 )

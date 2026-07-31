@@ -31,12 +31,47 @@ bzl_library(
 
 # TypeScript projection toolchain — consumes the imported atlas (//lean:atlas),
 # which bundles Polyglot.Typescript.{Ast,OfLir,Render}. `aion_emit(target =
-# "typescript")` resolves here. Other languages' aion_emit_toolchains await the
-# atlas bundling their OfLir.
+# "typescript")` resolves here.
 aion_emit_toolchain(
     name = "typescript_aion_emit_toolchain",
     atlas = "//lean:atlas",
     import_module = "Polyglot.Typescript",
     language = "typescript",
     render_fn = "Polyglot.Typescript.OfLir.render",
+)
+
+# Rust projection toolchain. `aion_emit(target = "rust")` resolves here.
+#
+# `_BARE_LANGUAGE_SHORTCUTS` in aion.bzl has advertised "rust", "sql" and
+# "python" since it was written, and only "typescript" was ever defined — so
+# those three failed at ANALYSIS with "no such target", which reads as a typo in
+# the caller rather than as a missing toolchain. This closes the rust one.
+#
+# `import_module` is the OfLir module directly, NOT an umbrella `Polyglot.Rust`:
+# no such module exists, and the atlas bundles
+# `Polyglot.Rust.{RustAst,Builders,OfLir}` individually.
+#
+# ⚠ REQUIRES AN ATLAS NEWER THAN atlas-v0.3.3. `//lean:atlas` is a PREBUILT
+# release asset, not a build of polyglot's source, so adding the Rust modules to
+# `//engine:polyglot_atlas` upstream does not reach a consumer until a new
+# `atlas-v<ver>` is published and `//lean:atlas.bzl` is repointed at it. Against
+# 0.3.3 this target analyzes cleanly and then fails at Lean compile time with
+# "unknown module Polyglot.Rust.OfLir" — an error that names the module and not
+# the reason. Bump the atlas before advertising this.
+#
+# NOTE on what this can emit. `Polyglot.Rust.OfLir.lowerTopDecl` covers type
+# aliases, consts, use/pub-use, comments, raw passthrough, FIELDLESS enums and
+# trait signatures — and nothing else; `Lir` has no `match` node and no
+# data-carrying enum, so an evaluator-shaped emit still goes through
+# `Polyglot.Rust.Builders` (the syn-serde substrate) rather than through Lir.
+# `render` swallows a lowering failure into a `// LOWERING ERROR` comment rather
+# than failing the action, so a consumer emitting an unsupported construct gets a
+# file that is missing a declaration rather than a build that stops. Check the
+# emitted output, not just the exit code.
+aion_emit_toolchain(
+    name = "rust_aion_emit_toolchain",
+    atlas = "//lean:atlas",
+    import_module = "Polyglot.Rust.OfLir",
+    language = "rust",
+    render_fn = "Polyglot.Rust.OfLir.render",
 )

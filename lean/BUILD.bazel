@@ -29,14 +29,33 @@ config_setting(
 # olean is fetched from this repo's GitHub releases (//lean:atlas.bzl).
 # Consumers `deps = ["@rules_lang//lean:atlas"]` to reach Polyglot.* as compiled
 # oleans under the pinned v4.30.0-rc2 toolchain.
+#
+# TWO platforms are published, and the pair is not arbitrary: linux_x86_64 is
+# what CI runs on and darwin_arm64 is what developers run on. There is NO
+# linux_arm64 archive, so a Lean target built for a Graviton platform — which is
+# every workload in the graph fleet — cannot resolve one.
+#
+# The `no_match_error` below exists to say that. Without it the select falls
+# through to Bazel's own message, which reports that no condition matched and
+# lists the two that exist; true, and it reads as a misconfigured consumer rather
+# than as a missing release artifact. Publishing the third archive is the fix;
+# until then this names the gap at the point someone hits it.
 lean_imported_library(
     name = "atlas",
     srcs = select({
         ":linux_x86_64": ["@polyglot_atlas_linux_x86_64//:all"],
         ":darwin_arm64": ["@polyglot_atlas_darwin_arm64//:all"],
-    }),
+    }, no_match_error = (
+        "No polyglot atlas is published for this platform.\n" +
+        "Published: linux_x86_64, darwin_arm64. Notably ABSENT: linux_arm64,\n" +
+        "which is what every Graviton/arm64 workload builds for — so a Lean\n" +
+        "target in an arm64 configuration fails HERE, at analysis, rather than\n" +
+        "at fetch. Build Lean targets on an x86_64 exec platform, or publish a\n" +
+        "linux_arm64 archive from polyglot's release job and add it to\n" +
+        "//lean:atlas.bzl."
+    )),
     path_marker = select({
         ":linux_x86_64": "@polyglot_atlas_linux_x86_64//:.lean_root",
         ":darwin_arm64": "@polyglot_atlas_darwin_arm64//:.lean_root",
-    }),
+    }, no_match_error = "See the no_match_error on :atlas srcs — no atlas for this platform."),
 )

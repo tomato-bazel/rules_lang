@@ -1,8 +1,7 @@
 """Module extension: fetch the per-arch polyglot atlas olean from this repo's
 GitHub release assets.
 
-The private engine's release CI (gitlab aion/polyglot, `publish_atlas_olean`)
-builds `polyglot_atlas-<os>_<arch>.tar.gz` and attaches it to the matching
+The private mattmarshall/polyglot GitHub Actions release workflow builds `polyglot_atlas-<os>_<arch>.tar.gz` and attaches it to the matching
 `atlas-v<ver>` release here. `//lean:atlas` (a lean_imported_library) selects
 the arch-matching archive — no engine source, no recompile.
 """

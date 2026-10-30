@@ -6,7 +6,7 @@ atlas artifacts from this public repository; they need no private source token.
 
 ## Use the published module
 
-Add `bazel_dep(name = "rules_lang", version = "0.5.0")` to `MODULE.bazel` and use
+Add `bazel_dep(name = "rules_lang", version = "0.5.1")` to `MODULE.bazel` and use
 these registries in the workspace `.bazelrc`:
 
 ```text
@@ -14,7 +14,7 @@ common --registry=https://registry.tbzl.dev/
 common --registry=https://bcr.bazel.build/
 ```
 
-The wrapper pins atlas `0.3.3` and its Lean version. Supported atlas platforms are
+The wrapper pins atlas `0.3.4` and its Lean version. Supported atlas platforms are
 Linux x86_64 and macOS arm64. Linux arm64 is explicitly unsupported. Changing the
 Lean toolchain independently can make the imported `.olean` files unloadable.
 

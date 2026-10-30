@@ -17,6 +17,9 @@ filegroup(
 )
 """
 
+# atlas-v0.3.4 publishes native artifacts from mattmarshall/polyglot with
+# source-commit, compiler, platform, and checksum provenance in its manifest.
+#
 # atlas-v0.3.3 adds Polyglot.RoundTrip to the bundle, alongside the generic
 # Syntax precedence kernel (Syntax.Expr + Syntax.Prec, added in v0.3.1) and
 # Core/Lir, Sql, Typescript, Java, Wasm, Yaml. Both per-arch tarballs contain
@@ -30,19 +33,19 @@ filegroup(
 # which still REDIRECTS to here, but relying on that is fragile: the moment
 # anyone creates a new repo at fastverk/rules_lang the redirect disappears and
 # this would silently point at a different repository.
-_BASE = "https://github.com/tomato-bazel/rules_lang/releases/download/atlas-v0.3.3"
+_BASE = "https://github.com/tomato-bazel/rules_lang/releases/download/atlas-v0.3.4"
 
 def _atlas_ext_impl(_ctx):
     http_archive(
         name = "polyglot_atlas_linux_x86_64",
         url = _BASE + "/polyglot_atlas-linux_x86_64.tar.gz",
-        sha256 = "32c793f93ffdf913593b959170e688774a288a40fa743aa460f9c7498969995e",
+        sha256 = "4774e635fc27a010dd9a8b24c745b84c56da60bd01016d97ed05567675fa0b2b",
         build_file_content = _ATLAS_BUILD,
     )
     http_archive(
         name = "polyglot_atlas_darwin_arm64",
         url = _BASE + "/polyglot_atlas-darwin_arm64.tar.gz",
-        sha256 = "f3fa16a8a1a9c95259aeb28a1eec22c906d428f9b70345a88c09d7e99cbbe14c",
+        sha256 = "d7e59584bfbed99eeae7a2254c3cc137cfaf835785a9a2d5c14d61cdb02ad801",
         build_file_content = _ATLAS_BUILD,
     )
 

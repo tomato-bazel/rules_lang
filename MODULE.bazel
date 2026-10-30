@@ -1,6 +1,6 @@
 module(
     name = "rules_lang",
-    version = "0.5.0",
+    version = "0.5.1",
 )
 
 # Public rules layer only — the engine + AST source stay private in

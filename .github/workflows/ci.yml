@@ -78,18 +78,38 @@ jobs:
   # `bazel build`, not `bazel test`: //smoke:smoke is a lean_library, and
   # compiling it IS the assertion.
   #
-  # ubuntu only. The atlas ships per-arch (linux_x86_64 + darwin_arm64) and both
-  # are gated at release time; running one arch here is enough to catch a bad
-  # upload without doubling the toolchain fetch.
+  # Load the actual released archive on both supported native platforms. Keep
+  # the existing Linux check name stable for repository branch protection.
   smoke:
-    name: lean smoke (atlas olean load)
-    runs-on: ubuntu-latest
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: lean smoke (atlas olean load)
+            runner: ubuntu-24.04
+            platform: linux_x86_64
+            system: Linux
+            arch: x86_64
+          - name: lean smoke (darwin arm64 atlas olean load)
+            runner: macos-15
+            platform: darwin_arm64
+            system: Darwin
+            arch: arm64
     steps:
       - uses: actions/checkout@v4
       - uses: bazel-contrib/setup-bazel@0.10.0
         with:
           bazelisk-cache: true
-          disk-cache: smoke-${{ github.workflow }}
+          disk-cache: smoke-${{ github.workflow }}-${{ matrix.platform }}
           repository-cache: true
-      - run: bazel build //smoke/... --show_result=1
+      - name: Verify native platform and load the released atlas
+        env:
+          EXPECTED_SYSTEM: ${{ matrix.system }}
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          test "$(uname -s)" = "$EXPECTED_SYSTEM"
+          test "$(uname -m)" = "$EXPECTED_ARCH"
+          bazel build //smoke/... --show_result=1

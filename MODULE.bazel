@@ -8,6 +8,14 @@ module(
 # from this repo's GitHub release assets (see //lean:atlas.bzl). Consumers
 # resolve rules_lang anonymously, with no private-source access.
 bazel_dep(name = "rules_lean", version = "0.5.5")
+
+# Retain imported compiled modules in lean_binary's runtime root.
+single_version_override(
+    module_name = "rules_lean",
+    patch_strip = 1,
+    patches = ["//third_party/patches:rules_lean_binary_runtime.patch"],
+)
+
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 

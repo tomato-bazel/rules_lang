@@ -21,7 +21,9 @@ Lean toolchain independently can make the imported `.olean` files unloadable.
 ## Packages
 
 - `polyglot/aion.bzl`: `aion_spec`, `aion_emit`, and emit toolchains for
-  specification-to-source generation through the compiled atlas.
+  specification-to-source generation through the compiled atlas. Built-in emit
+  toolchains cover Rust and TypeScript subsets; other languages need explicit
+  custom toolchains. Checked lowering failures stop emission with a nonzero status.
 - `polyglot/sql.bzl`: SQL parse rules and the PostgreSQL toolchain type; consumers
   provide their parser implementation through `rules_postgres`.
 - `rules/aion.bzl`: compatibility entry point for existing users.
@@ -37,12 +39,13 @@ is not by itself a proof of equivalent program behavior.
 ## Build and check
 
 ```sh
-bazel build //smoke/...
+bazel test //smoke/... --test_output=errors
 bazel test //docs/... --test_output=errors
 ```
 
-The smoke target is a Lean library: compilation verifies that the released atlas
-can be imported. The docs tests check generated reference-document drift. Use
+Smoke checks import the compiled atlas, execute successful and rejected emissions,
+and preserve the custom string-renderer contract. The docs tests check generated
+reference-document drift. Use
 `bazel run //docs:update` after changing documented rule interfaces. A cold root
 build downloads the Lean toolchain, even for documentation; consumer modules
 avoid this eager root-development registration cost.

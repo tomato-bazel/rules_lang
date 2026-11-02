@@ -35,6 +35,7 @@ bzl_library(
 aion_emit_toolchain(
     name = "typescript_aion_emit_toolchain",
     atlas = "//lean:atlas",
+    checked_render_fn = "Polyglot.Typescript.OfLir.renderChecked",
     import_module = "Polyglot.Typescript",
     language = "typescript",
     render_fn = "Polyglot.Typescript.OfLir.render",
@@ -51,26 +52,14 @@ aion_emit_toolchain(
 # no such module exists, and the atlas bundles
 # `Polyglot.Rust.{RustAst,Builders,OfLir}` individually.
 #
-# ⚠ REQUIRES AN ATLAS NEWER THAN atlas-v0.3.3. `//lean:atlas` is a PREBUILT
-# release asset, not a build of polyglot's source, so adding the Rust modules to
-# `//engine:polyglot_atlas` upstream does not reach a consumer until a new
-# `atlas-v<ver>` is published and `//lean:atlas.bzl` is repointed at it. Against
-# 0.3.3 this target analyzes cleanly and then fails at Lean compile time with
-# "unknown module Polyglot.Rust.OfLir" — an error that names the module and not
-# the reason. Bump the atlas before advertising this.
-#
-# NOTE on what this can emit. `Polyglot.Rust.OfLir.lowerTopDecl` covers type
-# aliases, consts, use/pub-use, comments, raw passthrough, FIELDLESS enums and
-# trait signatures — and nothing else; `Lir` has no `match` node and no
-# data-carrying enum, so an evaluator-shaped emit still goes through
-# `Polyglot.Rust.Builders` (the syn-serde substrate) rather than through Lir.
-# `render` swallows a lowering failure into a `// LOWERING ERROR` comment rather
-# than failing the action, so a consumer emitting an unsupported construct gets a
-# file that is missing a declaration rather than a build that stops. Check the
-# emitted output, not just the exit code.
+# Requires the qualified Atlas containing the Rust lowering and checked API.
+# Existing immutable releases are not changed by a rule update. This toolchain
+# propagates typed lowering errors; fieldless enums and trait signatures retain
+# the renderer's existing subset limits and do not imply execution equivalence.
 aion_emit_toolchain(
     name = "rust_aion_emit_toolchain",
     atlas = "//lean:atlas",
+    checked_render_fn = "Polyglot.Rust.OfLir.renderChecked",
     import_module = "Polyglot.Rust.OfLir",
     language = "rust",
     render_fn = "Polyglot.Rust.OfLir.render",

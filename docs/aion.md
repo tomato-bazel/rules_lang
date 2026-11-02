@@ -8,7 +8,7 @@ aspect / toolchain stack — see INTERNAL.md):
   * `aion_spec` rule — wraps a `Polyglot.Core.Lir.Module`-producing
     Lean module in an `AionSpecInfo` provider.
   * `aion_emit_toolchain` rule — defines a per-target-language
-    projection (import_module, render_fn, src_files) as an
+    projection (import_module, render_fn, optional checked_render_fn, atlas) as an
     `AionEmitToolchainInfo` provider. Repos register their own
     toolchains; no rules_lang edits needed for a new language.
   * `aion_emit` macro — composes the internal `_aion_emit_main_gen`
@@ -41,7 +41,7 @@ Default usage (point at a registered toolchain by label):
     )
 
 Shortcut: `target` accepts the bare language name `"typescript"` /
-`"sql"` / `"python"` / `"rust"` and resolves to the corresponding
+`"rust"` and resolves to the corresponding
 `@rules_lang//polyglot:<lang>_aion_emit_toolchain` label.
 Custom toolchains use an explicit label.
 
@@ -52,15 +52,16 @@ Adding a new target language (in any repo):
         language = "haskell",
         import_module = "Polyglot.Haskell",
         render_fn = "Polyglot.Haskell.OfLir.render",
-        src_files = [
-          "@polyglot_ast//:Polyglot/Core/Lir.lean",
-          "@polyglot_ast//:Polyglot/Core.lean",
-          "@polyglot_ast//:Polyglot/Haskell/OfLir.lean",
-        ],
+        atlas = ":compiled_haskell_atlas",
     )
 
 Then use `target = ":haskell_aion_emit_toolchain"` (or its full
 label from another package).
+
+Built-ins use `checked_render_fn : Lir.Module → Except ε String`, with `Repr ε`,
+so typed lowering errors fail emission instead of becoming source comments.
+Custom toolchains can set the same field; omitting it preserves the existing
+`render_fn : Lir.Module → String` contract.
 
 <a id="aion_emit_toolchain"></a>
 
@@ -69,7 +70,7 @@ label from another package).
 <pre>
 load("@rules_lang//polyglot:aion.bzl", "aion_emit_toolchain")
 
-aion_emit_toolchain(<a href="#aion_emit_toolchain-name">name</a>, <a href="#aion_emit_toolchain-atlas">atlas</a>, <a href="#aion_emit_toolchain-import_module">import_module</a>, <a href="#aion_emit_toolchain-language">language</a>, <a href="#aion_emit_toolchain-render_fn">render_fn</a>)
+aion_emit_toolchain(<a href="#aion_emit_toolchain-name">name</a>, <a href="#aion_emit_toolchain-atlas">atlas</a>, <a href="#aion_emit_toolchain-checked_render_fn">checked_render_fn</a>, <a href="#aion_emit_toolchain-import_module">import_module</a>, <a href="#aion_emit_toolchain-language">language</a>, <a href="#aion_emit_toolchain-render_fn">render_fn</a>)
 </pre>
 
 Defines a per-target-language projection for `aion_emit`. Each
@@ -84,6 +85,7 @@ new `aion_emit_toolchain` declaration — no rules_lang edits needed.
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="aion_emit_toolchain-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="aion_emit_toolchain-atlas"></a>atlas |  The imported polyglot atlas (a lean_imported_library over the prebuilt olean): provides Core.Lir + the language's Render/OfLir as compiled oleans, no source recompile. Forwarded as LeanInfo so aion_emit's lean_emit deps on it.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="aion_emit_toolchain-checked_render_fn"></a>checked_render_fn |  Optional Lir.Module → Except ε String projection with Repr ε. Typed failures become IO errors; overrides render_fn when set.   | String | optional |  `""`  |
 | <a id="aion_emit_toolchain-import_module"></a>import_module |  Lean module the generated Main imports to reach the lowering (e.g. `Polyglot.Typescript`).   | String | required |  |
 | <a id="aion_emit_toolchain-language"></a>language |  Human-readable language identifier (e.g. `typescript`, `sql`).   | String | required |  |
 | <a id="aion_emit_toolchain-render_fn"></a>render_fn |  Fully-qualified Lean function name `Lir.Module → String` (e.g. `Polyglot.Typescript.OfLir.render`).   | String | required |  |
@@ -121,7 +123,7 @@ doc-gen, fixture-validation, etc. read the provider.
 <pre>
 load("@rules_lang//polyglot:aion.bzl", "AionEmitToolchainInfo")
 
-AionEmitToolchainInfo(<a href="#AionEmitToolchainInfo-import_module">import_module</a>, <a href="#AionEmitToolchainInfo-render_fn">render_fn</a>, <a href="#AionEmitToolchainInfo-language">language</a>)
+AionEmitToolchainInfo(<a href="#AionEmitToolchainInfo-import_module">import_module</a>, <a href="#AionEmitToolchainInfo-render_fn">render_fn</a>, <a href="#AionEmitToolchainInfo-checked_render_fn">checked_render_fn</a>, <a href="#AionEmitToolchainInfo-language">language</a>)
 </pre>
 
 Toolchain config for projecting a Lir.Module to one specific target language.
@@ -131,7 +133,8 @@ Toolchain config for projecting a Lir.Module to one specific target language.
 | Name  | Description |
 | :------------- | :------------- |
 | <a id="AionEmitToolchainInfo-import_module"></a>import_module |  Lean module the generated Main imports to reach the lowering (e.g. `Polyglot.Typescript`).    |
-| <a id="AionEmitToolchainInfo-render_fn"></a>render_fn |  fully-qualified Lean function name `Lir.Module → String` (e.g. `Polyglot.Typescript.OfLir.render`).    |
+| <a id="AionEmitToolchainInfo-render_fn"></a>render_fn |  fully-qualified legacy/custom Lean function `Lir.Module → String`.    |
+| <a id="AionEmitToolchainInfo-checked_render_fn"></a>checked_render_fn |  optional Lir.Module → Except ε String projection; Repr ε errors fail emission.    |
 | <a id="AionEmitToolchainInfo-language"></a>language |  human-readable language identifier (e.g. `typescript`, `sql`) — surfaced in progress messages.    |
 
 
@@ -175,7 +178,7 @@ Project a Lir-spec target to source via the toolchain's lowering.
 | :------------- | :------------- | :------------- |
 | <a id="aion_emit-name"></a>name |  target name. The lean compilation runs as `<name>` (a `lean_emit` underneath); the Main-generation step is `<name>_main_gen` (private intermediate).   |  none |
 | <a id="aion_emit-spec"></a>spec |  label of an `aion_spec` target (provides `AionSpecInfo`).   |  none |
-| <a id="aion_emit-target"></a>target |  either a bare language name (`"typescript"`, `"sql"`, `"python"`, `"rust"`) — resolved to the registered toolchain at `@rules_lang//polyglot:<lang>_aion_emit_toolchain` — or an explicit label of an `aion_emit_toolchain` target.   |  none |
+| <a id="aion_emit-target"></a>target |  either a built-in language name (`"typescript"`, `"rust"`) — resolved to the registered toolchain at `@rules_lang//polyglot:<lang>_aion_emit_toolchain` — or an explicit label of an `aion_emit_toolchain` target.   |  none |
 | <a id="aion_emit-out"></a>out |  emitted source filename (e.g. `"logger.ts"`).   |  none |
 | <a id="aion_emit-deps"></a>deps |  lean_emit deps (typically LAKE_PACKAGES).   |  `None` |
 | <a id="aion_emit-visibility"></a>visibility |  forwarded to the emitted lean_emit target.   |  `None` |

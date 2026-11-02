@@ -1,4 +1,7 @@
-load("@rules_lean//lean:lean.bzl", "lean_library")
+load("@rules_lean//lean:lean.bzl", "lean_binary", "lean_library")
+load("@rules_python//python:py_test.bzl", "py_test")
+load("//polyglot:aion.bzl", "aion_emit", "aion_emit_toolchain", "aion_spec")
+load("//polyglot:aion_rules.bzl", "aion_emit_main_gen")
 
 # Integration smoke: compile a trivial Lean module against the imported atlas
 # (//lean:atlas), which fetches the per-arch olean tarball from this repo's
@@ -7,4 +10,101 @@ lean_library(
     name = "smoke",
     srcs = ["Smoke.lean"],
     deps = ["//lean:atlas"],
+)
+
+# Consumer fixtures import only the released compiled Atlas, never engine sources.
+[
+    aion_spec(
+        name = case + "_spec",
+        srcs = ["CheckedSpec.lean"],
+        module = "CheckedSpec",
+        symbol = "constant" if case == "valid" else "wrongTarget",
+    )
+    for case in [
+        "valid",
+        "wrong",
+    ]
+]
+
+[
+    aion_emit(
+        name = language + "_output",
+        out = language + ".txt",
+        spec = ":valid_spec",
+        target = language,
+    )
+    for language in [
+        "typescript",
+        "rust",
+    ]
+]
+
+[
+    aion_emit_main_gen(
+        name = language + "_" + case + "_main",
+        spec = ":" + case + "_spec",
+        toolchain = "//polyglot:" + language + "_aion_emit_toolchain",
+    )
+    for language in [
+        "typescript",
+        "rust",
+    ]
+    for case in [
+        "valid",
+        "wrong",
+    ]
+]
+
+[
+    lean_binary(
+        name = language + "_" + case,
+        srcs = [":" + language + "_" + case + "_main"],
+        entry = language + "_" + case + "_main.lean",
+        deps = ["//lean:atlas"],
+    )
+    for language in [
+        "typescript",
+        "rust",
+    ]
+    for case in [
+        "valid",
+        "wrong",
+    ]
+]
+
+aion_emit_toolchain(
+    name = "legacy_toolchain",
+    atlas = "//lean:atlas",
+    import_module = "CheckedSpec",
+    language = "fixture",
+    render_fn = "CheckedSpec.legacyRender",
+)
+
+aion_emit_main_gen(
+    name = "legacy_main",
+    spec = ":valid_spec",
+    toolchain = ":legacy_toolchain",
+)
+
+lean_binary(
+    name = "legacy",
+    srcs = [":legacy_main"],
+    entry = "legacy_main.lean",
+    deps = ["//lean:atlas"],
+)
+
+py_test(
+    name = "checked_emission_test",
+    srcs = ["checked_emission_test.py"],
+    data = [":" + language + "_" + case for language in [
+        "typescript",
+        "rust",
+    ] for case in [
+        "valid",
+        "wrong",
+    ]] + [
+        ":legacy",
+        ":rust_output",
+        ":typescript_output",
+    ],
 )

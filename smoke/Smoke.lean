@@ -1,5 +1,7 @@
 import Polyglot.Core.Lir
 import Polyglot.Typescript.Ast
+import Polyglot.Typescript.OfLir
+import Polyglot.Rust.OfLir
 import Syntax.Prec
 
 -- Smoke: forces the imported atlas oleans (fetched from the GitHub release asset
@@ -13,3 +15,7 @@ def smokeAtlasLoads : Nat := 0
 -- drops Syntax/{Expr,Prec} fails here instead of silently in a consumer.
 example : Type := Syntax.Expr
 #check @Syntax.Grammar.parse
+
+-- The public emit rules require these checked APIs in the pinned compiled Atlas.
+#check @Polyglot.Typescript.OfLir.renderChecked
+#check @Polyglot.Rust.OfLir.renderChecked

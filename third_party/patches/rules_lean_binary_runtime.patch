@@ -1,0 +1,27 @@
+--- a/lean/lean.bzl
++++ b/lean/lean.bzl
+@@ -790,7 +790,24 @@
+ """.format(ws = ctx.workspace_name, root = root_rf, lean = lean_rf, entry = entry_src.short_path),
+     )
+ 
++    # Compilation stages imported oleans, but the runtime runner uses only its
++    # own root. Retain the declared dependency closure there, including shared
++    # namespaces where Lean cannot fall through to another LEAN_PATH root.
++    own_modules = {rel[:-len(".lean")] + ".olean": True for (_, rel, _) in units}
++    runtime_links = {}
++    for file in dep_files.to_list():
++        if not file.path.endswith(".olean"):
++            continue
++        for dep_root in dep_marker_dirs:
++            prefix = dep_root + "/"
++            if file.path.startswith(prefix):
++                rel = file.path[len(prefix):]
++                link = root_rf + "/" + rel
++                if rel not in own_modules and link not in runtime_links:
++                    runtime_links[link] = file
++                break
+     runfiles = ctx.runfiles(
++        symlinks = runtime_links,
+         files = own_oleans + [marker, entry_src, tc.lean],
+         transitive_files = depset(transitive = [tc.runtime, dep_files]),
+     )

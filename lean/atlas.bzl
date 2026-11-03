@@ -17,35 +17,23 @@ filegroup(
 )
 """
 
-# atlas-v0.3.4 publishes native artifacts from mattmarshall/polyglot with
-# source-commit, compiler, platform, and checksum provenance in its manifest.
-#
-# atlas-v0.3.3 adds Polyglot.RoundTrip to the bundle, alongside the generic
-# Syntax precedence kernel (Syntax.Expr + Syntax.Prec, added in v0.3.1) and
-# Core/Lir, Sql, Typescript, Java, Wasm, Yaml. Both per-arch tarballs contain
-# Syntax/{Expr,Prec}.olean and Polyglot/RoundTrip.olean (33 entries each).
-#
-# RoundTrip is here so consumers can state theorems against
-# Polyglot.RoundTrip.Strict WITHOUT depending on the private polyglot source
-# module — agentic_ide_runtime's L0 acceptance gate is the first consumer.
-#
-# The URL names tomato-bazel explicitly. It used to say fastverk/rules_lang,
-# which still REDIRECTS to here, but relying on that is fragile: the moment
-# anyone creates a new repo at fastverk/rules_lang the redirect disappears and
-# this would silently point at a different repository.
-_BASE = "https://github.com/tomato-bazel/rules_lang/releases/download/atlas-v0.3.4"
+# The native archives contain compiled Polyglot and Syntax modules, including
+# the Rust renderer and checked-emission APIs. The public provenance manifest
+# records the private source revision, Lean compiler, platforms, and checksums.
+# Keep explicit tomato-bazel URLs and immutable release bytes.
+_BASE = "https://github.com/tomato-bazel/rules_lang/releases/download/atlas-v0.3.5"
 
 def _atlas_ext_impl(_ctx):
     http_archive(
         name = "polyglot_atlas_linux_x86_64",
         url = _BASE + "/polyglot_atlas-linux_x86_64.tar.gz",
-        sha256 = "4774e635fc27a010dd9a8b24c745b84c56da60bd01016d97ed05567675fa0b2b",
+        sha256 = "9cb48a7ff003b4f90c3dbdc104f8a95745c10f4e345d1ee22a7cc71cfbc5aaa0",
         build_file_content = _ATLAS_BUILD,
     )
     http_archive(
         name = "polyglot_atlas_darwin_arm64",
         url = _BASE + "/polyglot_atlas-darwin_arm64.tar.gz",
-        sha256 = "d7e59584bfbed99eeae7a2254c3cc137cfaf835785a9a2d5c14d61cdb02ad801",
+        sha256 = "901bb84966f5d7fe65ac7c0f35c3c3bc1555f3b26edebbb8c2715ab26ae36112",
         build_file_content = _ATLAS_BUILD,
     )
 

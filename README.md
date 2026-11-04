@@ -17,6 +17,8 @@ common --registry=https://bcr.bazel.build/
 The wrapper pins atlas `0.3.5` and its Lean version. Supported atlas platforms are
 Linux x86_64 and macOS arm64. Linux arm64 is explicitly unsupported. Changing the
 Lean toolchain independently can make the imported `.olean` files unloadable.
+Executable imports use the upstream rules_lean runtime dependency fix; consumers
+need no root-only override.
 
 ## Packages
 

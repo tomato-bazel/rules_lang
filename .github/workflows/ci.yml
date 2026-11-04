@@ -75,8 +75,8 @@ jobs:
   # wrong-toolchain atlas upload fails here and nowhere else, so it is worth the
   # toolchain cost.
   #
-  # `bazel build`, not `bazel test`: //smoke:smoke is a lean_library, and
-  # compiling it IS the assertion.
+  # Compile the import library and execute the checked-emission regression.
+  # A comment-only lowering error must not count as a successful source artifact.
   #
   # Load the actual released archive on both supported native platforms. Keep
   # the existing Linux check name stable for repository branch protection.
@@ -112,4 +112,4 @@ jobs:
         run: |
           test "$(uname -s)" = "$EXPECTED_SYSTEM"
           test "$(uname -m)" = "$EXPECTED_ARCH"
-          bazel build //smoke/... --show_result=1
+          bazel test //smoke/... --test_output=errors --show_result=1

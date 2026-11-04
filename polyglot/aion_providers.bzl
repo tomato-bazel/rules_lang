@@ -38,7 +38,8 @@ AionEmitToolchainInfo = provider(
     doc = "Toolchain config for projecting a Lir.Module to one specific target language.",
     fields = {
         "import_module": "Lean module the generated Main imports to reach the lowering (e.g. `Polyglot.Typescript`).",
-        "render_fn": "fully-qualified Lean function name `Lir.Module → String` (e.g. `Polyglot.Typescript.OfLir.render`).",
+        "render_fn": "fully-qualified legacy/custom Lean function `Lir.Module → String`.",
+        "checked_render_fn": "optional Lir.Module → Except ε String projection; Repr ε errors fail emission.",
         "language": "human-readable language identifier (e.g. `typescript`, `sql`) — surfaced in progress messages.",
     },
 )

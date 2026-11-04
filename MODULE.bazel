@@ -8,7 +8,6 @@ module(
 # from this repo's GitHub release assets (see //lean:atlas.bzl). Consumers
 # resolve rules_lang anonymously, with no private-source access.
 bazel_dep(name = "rules_lean", version = "0.7.1")
-
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 
